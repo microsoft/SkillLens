@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillLens — A Systematic Study of Model-Generated Agent Skills</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f46e5'/%3E%3Cstop offset='0.55' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='27' cy='27' r='13' fill='none' stroke='white' stroke-width='5'/%3E%3Cline x1='36' y1='36' x2='49' y2='49' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ========== Reset & Base ========== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #f8f9fc;
+  color: #1e293b;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+/* Subtle ambient grid behind everything for depth */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 18% 12%, rgba(124,58,237,0.07), transparent 45%),
+    radial-gradient(circle at 88% 78%, rgba(245,158,11,0.06), transparent 50%),
+    radial-gradient(circle at 60% 40%, rgba(236,72,153,0.045), transparent 55%);
+}
+body > * { position: relative; z-index: 1; }
+a { color: #7c3aed; text-decoration: none; transition: color 0.2s; }
+a:hover { color: #4f46e5; }
+
+/* ========== Container ========== */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.container-wide { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+/* ========== Scroll Reveal ========== */
+.reveal {
+  opacity: 0; transform: translateY(40px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+
+/* ========== Hero ========== */
+.hero {
+  display: block;
+  text-align: center; padding: 120px 24px 80px;
+  background: linear-gradient(160deg, #eef2ff 0%, #f8f9fc 40%, #eef2ff 100%);
+}
+.hero-inner {
+  display: inline-block;
+  max-width: 100%;
+}
+.hero-wordmark {
+  display: inline-flex; align-items: baseline; gap: 2px;
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 22px;
+  line-height: 1;
+}
+.hero-wordmark .wm-skill { color: #1e293b; }
+.hero-wordmark .wm-lens {
+  background: linear-gradient(110deg, #0ea5e9 0%, #4f46e5 25%, #7c3aed 50%, #ec4899 78%, #f59e0b 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-style: italic;
+  display: inline-block;
+  padding-right: 0.18em;
+  margin-right: -0.18em;
+}
+.hero-wordmark::before, .hero-wordmark::after {
+  content: ""; display: inline-block;
+  width: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+  margin: 0 12px; vertical-align: middle;
+}
+.badge {
+  display: inline-block; padding: 6px 16px; border-radius: 20px;
+  background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2);
+  font-size: 0.8rem; font-weight: 600; color: #7c3aed; letter-spacing: 0.5px;
+  margin-bottom: 28px;
+}
+.hero h1 {
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 800;
+  line-height: 1.2; margin-bottom: 18px;
+  color: #1e293b; white-space: nowrap;
+}
+.hero h1 .connector {
+  font-weight: 400; font-size: 0.62em; color: #94a3b8;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  display: inline-block; margin: 0 0.3em; vertical-align: 0.18em;
+}
+.hero h1 .highlight-1 {
+  background: linear-gradient(135deg, #0ea5e9 0%, #4f46e5 60%, #7c3aed 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero h1 .highlight-2 {
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 55%, #f59e0b 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+@media (max-width: 720px) {
+  .hero h1 { white-space: normal; }
+}
+.hero .subtitle {
+  display: inline-block;
+  font-size: clamp(1.18rem, 2.5vw, 1.45rem); color: #334155;
+  font-weight: 600; margin-bottom: 34px; line-height: 1.5;
+  letter-spacing: -0.01em;
+  padding: 9px 24px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.07), rgba(245,158,11,0.06));
+  border: 1px solid rgba(124,58,237,0.15);
+  border-radius: 999px;
+}
+.hero .subtitle em {
+  font-style: normal;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+.authors {
+  font-size: 1.08rem; color: #475569; margin-bottom: 10px; line-height: 1.85;
+}
+.authors strong { color: #1e293b; font-weight: 600; }
+.affiliations {
+  font-size: 0.96rem; color: #64748b; margin-bottom: 38px;
+}
+.btn-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+/* Related work card under buttons */
+.related-work {
+  display: inline-flex; align-items: center; gap: 14px;
+  margin-top: 40px;
+  padding: 10px 22px 10px 14px;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(13,148,136,0.22);
+  border-radius: 999px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  max-width: 100%;
+}
+.related-work:hover {
+  transform: translateY(-2px);
+  border-color: rgba(13,148,136,0.45);
+  box-shadow: 0 12px 28px rgba(13,148,136,0.18);
+  color: inherit;
+}
+.related-work .rw-icon {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  margin: 0 6px 0 4px;
+  background: linear-gradient(135deg, #bb352d 0 48%, #b17300 48% 66%, #0b7974 66%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.related-work .rw-text {
+  display: flex; flex-direction: column; gap: 1px;
+  min-width: 0;
+}
+.related-work .rw-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0d9488; font-weight: 600;
+}
+.related-work .rw-title {
+  font-size: 1rem; color: #1e293b; font-weight: 500;
+  line-height: 1.3;
+}
+.related-work .rw-title strong {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #0b7974, #0d9488);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-right: 4px;
+}
+.related-work .rw-summary {
+  font-size: 0.82rem; color: #64748b;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.related-work .rw-summary em {
+  font-style: italic; color: #475569; font-weight: 500;
+}
+.related-work .rw-arrow {
+  flex-shrink: 0;
+  font-size: 1.1rem; color: #ec4899;
+  transition: transform 0.25s ease;
+  margin-left: 6px;
+}
+.related-work:hover .rw-arrow { transform: translateX(4px); }
+@media (max-width: 640px) {
+  .related-work {
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 13px 28px; border-radius: 999px;
+  font-size: 0.92rem; font-weight: 600; letter-spacing: 0.01em;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer; border: none; position: relative; overflow: hidden;
+}
+.btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 50%);
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.btn:hover::after { opacity: 1; }
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #ec4899 100%);
+  color: white; box-shadow: 0 6px 20px rgba(124,58,237,0.28), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-primary:hover {
+  transform: translateY(-2px); box-shadow: 0 10px 28px rgba(124,58,237,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+  color: white;
+}
+.btn-outline {
+  background: #fff; color: #1e293b;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+}
+.btn-outline:hover {
+  background: #1e293b; color: #fff; border-color: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+}
+.btn svg { width: 18px; height: 18px; }
+
+/* ========== Institution Logos ========== */
+.inst-logos {
+  display: flex; align-items: center; justify-content: center; gap: 40px;
+  margin-bottom: 32px;
+}
+.inst-logos img { height: 40px; opacity: 0.85; transition: opacity 0.3s; }
+.inst-logos img:hover { opacity: 1; }
+
+/* ========== Section Common ========== */
+section {
+  padding: 64px 0 68px;
+  position: relative;
+  isolation: isolate;
+}
+section:nth-child(even) {
+  background: #ffffff;
+}
+section:nth-child(odd) {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.06), transparent 70%),
+    linear-gradient(180deg, #eef2ff 0%, #f1f5f9 100%);
+}
+.hero { background: linear-gradient(160deg, #eef2ff 0%, #f8f9fc 40%, #eef2ff 100%) !important; }
+
+/* Chapter marker — gradient pill at the seam */
+section + section::after {
+  content: "";
+  position: absolute;
+  top: -3px; left: 50%;
+  transform: translateX(-50%);
+  width: 56px; height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4f46e5, #ec4899);
+  box-shadow: 0 0 0 6px #fff, 0 4px 18px rgba(236,72,153,0.32);
+  z-index: 3;
+}
+
+.section-header {
+  position: relative; margin-bottom: 36px; padding-top: 4px;
+}
+.section-header::before {
+  content: attr(data-num);
+  position: absolute;
+  top: -10px; right: 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(2.6rem, 4vw, 3.6rem);
+  font-weight: 400;
+  line-height: 1;
+  color: rgba(124,58,237, 0.10);
+  pointer-events: none;
+  z-index: 0;
+  letter-spacing: -0.02em;
+  font-style: normal;
+}
+.section-header > * { position: relative; z-index: 1; }
+
+.section-label {
+  display: inline-flex; align-items: center; gap: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem; font-weight: 600; letter-spacing: 0.16em;
+  text-transform: uppercase; color: #1e293b; margin-bottom: 14px;
+  padding: 0; background: none; border: none; border-radius: 0;
+}
+.section-label::before {
+  content: ''; display: inline-block;
+  width: 28px; height: 2px;
+  background: #7c3aed;
+  border-radius: 2px;
+  box-shadow: none;
+}
+.section-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.015em; line-height: 1.15;
+  color: #0f172a;
+  margin-bottom: 18px;
+  max-width: 900px;
+  display: block;
+  padding-bottom: 0;
+}
+.section-title::after { content: none; }
+.section-title .accent {
+  font-style: italic; font-weight: 500;
+  color: #7c3aed;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+.section-desc {
+  font-size: 1.05rem; color: #64748b; max-width: 720px; margin-bottom: 0; line-height: 1.7;
+}
+
+/* ========== Motivation ========== */
+.motivation-lead {
+  font-size: 1.0rem; line-height: 1.8; color: #475569;
+  max-width: 820px; margin-bottom: 14px; font-weight: 400;
+}
+.motivation-lead em { font-style: italic; color: #1e293b; font-weight: 600; }
+.motivation-lead .hl {
+  font-style: normal; font-weight: 500; color: #7c3aed;
+}
+
+.motivation-body {
+  font-size: 1.0rem; line-height: 1.8; color: #475569;
+  max-width: 820px; margin-bottom: 44px;
+}
+.motivation-body p { margin-bottom: 14px; }
+.motivation-body em { font-style: italic; color: #1e293b; font-weight: 600; }
+.motivation-body .hl { color: #7c3aed; font-weight: 500; }
+.motivation-body strong { color: #0f172a; font-weight: 600; }
+
+.gap-callout {
+  position: relative;
+  background: #fff;
+  border-left: 4px solid #7c3aed;
+  padding: 22px 26px 22px 28px;
+  margin: 28px 0 44px;
+  max-width: 820px;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+}
+.gap-callout-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #7c3aed; font-weight: 700; margin-bottom: 8px;
+}
+.gap-callout-text {
+  font-size: 1.0rem; line-height: 1.7; color: #1e293b; font-weight: 400;
+}
+.gap-callout-text em { font-style: italic; color: #1e293b; font-weight: 600; }
+.gap-callout-text .hl-domain {
+  font-weight: 700;
+  color: #7c3aed;
+}
+.gap-callout-text .hl-modelgen {
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.rq-preview {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 18px; margin-top: 12px;
+}
+.rq-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px 22px 20px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.rq-item:hover {
+  transform: translateY(-3px);
+  border-color: #c7d2fe;
+  box-shadow: 0 8px 24px rgba(124,58,237,0.08);
+}
+.rq-item-head {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;
+}
+.rq-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+  color: #fff; background: #7c3aed;
+  padding: 3px 8px; border-radius: 4px;
+}
+.rq-item h4 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.12rem; font-weight: 600; color: #0f172a; margin: 0;
+  line-height: 1.3;
+}
+.rq-item p {
+  font-size: 0.92rem; line-height: 1.6; color: #64748b; margin: 0;
+}
+@media (max-width: 760px) {
+  .rq-preview { grid-template-columns: 1fr; }
+  .motivation-lead { font-size: 1.2rem; }
+}
+
+/* ========== Lifecycle Pipeline ========== */
+.pipeline {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: start; gap: 0; margin: 48px 0 32px;
+}
+.pipeline-stage { text-align: center; padding: 0 12px; }
+.stage-icon {
+  width: 96px; height: 96px; border-radius: 22px; margin: 0 auto 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.6rem; transition: transform 0.3s;
+}
+.pipeline-stage:hover .stage-icon { transform: scale(1.08); }
+.stage-1 .stage-icon { background: rgba(59,130,246,0.12); }
+.stage-2 .stage-icon { background: rgba(139,92,246,0.12); }
+.stage-3 .stage-icon { background: rgba(34,197,94,0.12); }
+.stage-title {
+  font-size: 1.18rem; font-weight: 600; color: #0f172a; margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+.stage-desc {
+  font-size: 0.88rem; color: #64748b; line-height: 1.55; max-width: 240px; margin: 0 auto;
+}
+.pipeline-arrow {
+  display: flex; align-items: center; justify-content: center;
+  padding-top: 34px; color: #cbd5e1; font-size: 1.8rem;
+}
+
+/* ========== Overview Figure ========== */
+.figure-wrap {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 16px; padding: 24px; margin-top: 16px;
+  transition: border-color 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.figure-wrap:hover { border-color: #a5b4fc; }
+.figure-wrap img { width: 100%; border-radius: 8px; display: block; }
+.figure-caption {
+  margin-top: 16px; font-size: 0.88rem; color: #94a3b8; text-align: center;
+}
+
+/* ========== Key Findings Cards ========== */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 20px; margin-top: 32px; }
+.card {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 28px 24px;
+  transition: all 0.35s ease; position: relative; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #ec4899);
+  opacity: 0; transition: opacity 0.3s;
+}
+.card:hover { transform: translateY(-4px); border-color: #a5b4fc; box-shadow: 0 8px 25px rgba(124,58,237,0.08); }
+.card:hover::before { opacity: 1; }
+.card-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px; font-size: 1.3rem;
+}
+.card-icon-blue { background: rgba(59,130,246,0.08); }
+.card-icon-purple { background: rgba(139,92,246,0.08); }
+.card-icon-green { background: rgba(34,197,94,0.08); }
+
+/* Finding cards: punchy headline on top */
+.card .finding-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #94a3b8; margin-bottom: 10px;
+}
+.card .finding-stat {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 2.0rem; font-weight: 600; line-height: 1.05;
+  color: #0f172a; margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+.card .finding-stat .stat-pos { color: #16a34a; }
+.card .finding-stat .stat-neg { color: #dc2626; }
+.card .finding-stat .stat-sep { color: #cbd5e1; font-weight: 400; margin: 0 6px; }
+.card .finding-stat .role-executor {
+  color: #2563eb;
+}
+.card .finding-stat .role-extractor {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-style: italic;
+  display: inline-block;
+  padding-right: 0.14em;
+  margin-right: -0.14em;
+}
+.card .finding-stat .role-neq {
+  display: inline-block;
+  color: #94a3b8;
+  font-weight: 400;
+  margin: 0 8px;
+  font-size: 1.8rem;
+  vertical-align: -2px;
+}
+.card h3 {
+  font-size: 1.15rem; font-weight: 600; color: #0f172a;
+  margin-bottom: 10px; line-height: 1.3; letter-spacing: -0.01em;
+}
+.card p { font-size: 0.9rem; color: #64748b; line-height: 1.65; }
+.card ul {
+  list-style: none; padding: 0; margin: 8px 0 0;
+  font-size: 0.88rem; color: #64748b; line-height: 1.7;
+}
+.card ul li::before { content: '→ '; color: #7c3aed; font-weight: 600; }
+
+/* ========== Metric Cards (RQ1) ========== */
+.metrics-block { margin-top: 20px; margin-bottom: 36px; }
+.metric-primary {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px 28px;
+  margin-bottom: 16px;
+  display: grid; grid-template-columns: auto 1fr; gap: 26px;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.metric-formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.05rem; font-weight: 500;
+  color: #0f172a;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  padding: 16px 22px; border-radius: 10px;
+  white-space: nowrap;
+  border: 1px solid rgba(124,58,237,0.12);
+}
+.metric-formula .form-pos { color: #7c3aed; }
+.metric-formula .form-neg { color: #ec4899; }
+.metric-formula .form-eq { color: #94a3b8; margin: 0 6px; }
+.metric-body { min-width: 0; }
+.metric-head {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px;
+}
+.metric-symbol {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.6rem; font-weight: 600; color: #7c3aed;
+  letter-spacing: -0.01em;
+}
+.metric-name {
+  font-size: 1.0rem; font-weight: 600; color: #0f172a;
+  letter-spacing: -0.005em;
+}
+.metric-desc {
+  font-size: 0.92rem; color: #475569; line-height: 1.6;
+}
+.metric-desc .pos { color: #16a34a; font-weight: 600; }
+.metric-desc .neg { color: #dc2626; font-weight: 600; }
+
+.metrics-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.metric-sub {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.metric-sub:hover { border-color: #c7d2fe; transform: translateY(-2px); }
+.metric-sub .metric-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 700; margin-bottom: 10px;
+}
+.metric-sub.ee .metric-tag { color: #2563eb; }
+.metric-sub.te .metric-tag { color: #16a34a; }
+.metric-sub .metric-head { margin-bottom: 8px; }
+.metric-sub.ee .metric-symbol { color: #2563eb; }
+.metric-sub.te .metric-symbol { color: #16a34a; }
+.metric-axis {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem; color: #64748b;
+  background: #f1f5f9; padding: 5px 10px; border-radius: 6px;
+  margin-top: 10px;
+}
+@media (max-width: 760px) {
+  .metric-primary { grid-template-columns: 1fr; }
+  .metric-formula { white-space: normal; text-align: center; }
+  .metrics-pair { grid-template-columns: 1fr; }
+}
+
+/* ========== Collapsible Results Panel ========== */
+@keyframes tableTogglePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.0), 0 6px 18px rgba(124,58,237,0.08); }
+  50%      { box-shadow: 0 0 0 8px rgba(124,58,237,0.0), 0 10px 26px rgba(124,58,237,0.18); }
+}
+@keyframes ctaShimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes arrowBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+@keyframes pointNudge {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  50%      { transform: translateX(4px) rotate(-6deg); }
+}
+
+.full-results-toggle {
+  width: 100%;
+  background: #fff;
+  color: #0f172a;
+  border: 2px solid #c7d2fe;
+  padding: 22px 26px;
+  border-radius: 16px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 22px;
+  text-align: left;
+  transition: all 0.3s ease;
+  position: relative; overflow: hidden;
+  animation: tableTogglePulse 2.6s ease-in-out infinite;
+}
+.full-results-toggle::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(124,58,237,0.04) 0%, rgba(245,158,11,0.04) 100%);
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.full-results-toggle:hover {
+  border-color: #7c3aed;
+  transform: translateY(-3px);
+  box-shadow: 0 16px 38px rgba(124,58,237,0.18) !important;
+  animation: none;
+}
+.full-results-toggle:hover::before { opacity: 1; }
+.full-results-toggle.is-open { animation: none; box-shadow: 0 4px 16px rgba(124,58,237,0.10) !important; }
+.full-results-toggle > * { position: relative; z-index: 1; }
+
+.full-results-toggle .toggle-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border: 1px solid rgba(124,58,237,0.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+}
+.full-results-toggle:hover .toggle-icon { transform: scale(1.08) rotate(-4deg); }
+
+.full-results-toggle .toggle-text { min-width: 0; }
+.full-results-toggle .toggle-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.18em; font-weight: 700;
+  text-transform: uppercase;
+  color: #7c3aed;
+  background: rgba(124,58,237,0.08);
+  padding: 3px 8px; border-radius: 4px;
+  margin-bottom: 6px;
+}
+.full-results-toggle .toggle-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.2rem; font-weight: 600; color: #0f172a;
+  line-height: 1.3; letter-spacing: -0.01em; display: block;
+}
+.full-results-toggle .explore-word {
+  display: inline-flex; align-items: center; gap: 6px;
+  position: relative;
+  font-style: italic;
+  background: linear-gradient(120deg, #4f46e5 0%, #ec4899 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% auto;
+  animation: ctaShimmer 3s linear infinite;
+  text-decoration: underline;
+  text-decoration-color: rgba(236,72,153,0.5);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  padding-right: 0.14em;
+  margin-right: -0.14em;
+}
+.full-results-toggle .explore-cursor {
+  font-style: normal;
+  -webkit-text-fill-color: initial;
+  display: inline-block;
+  animation: pointNudge 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+.full-results-toggle.is-open .explore-word { animation: none; }
+.full-results-toggle.is-open .explore-cursor { animation: none; opacity: 0.5; }
+.full-results-toggle .toggle-sub {
+  font-size: 0.85rem; color: #64748b; margin-top: 4px; display: block;
+}
+
+.full-results-toggle .toggle-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem; font-weight: 600; letter-spacing: 0.01em;
+  color: #fff;
+  background: linear-gradient(120deg, #4f46e5 0%, #ec4899 100%);
+  background-size: 200% 100%;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: none;
+  box-shadow: 0 6px 16px rgba(124,58,237,0.28);
+  white-space: nowrap;
+  animation: ctaShimmer 4s linear infinite;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.full-results-toggle:hover .toggle-cta {
+  transform: scale(1.04);
+  box-shadow: 0 10px 24px rgba(124,58,237,0.38);
+}
+.full-results-toggle .toggle-arrow {
+  display: inline-block;
+  font-size: 1.0rem; font-weight: 700;
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  animation: arrowBounce 1.4s ease-in-out infinite;
+}
+.full-results-toggle.is-open .toggle-arrow { transform: rotate(180deg); animation: none; }
+.full-results-toggle.is-open .toggle-cta { animation: none; }
+
+.full-results-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease, margin-top 0.4s ease;
+  opacity: 0;
+  margin-top: 0;
+}
+.full-results-panel.is-open {
+  max-height: 4000px;
+  opacity: 1;
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .full-results-toggle { grid-template-columns: 1fr; text-align: center; gap: 14px; }
+  .full-results-toggle .toggle-icon { margin: 0 auto; }
+  .full-results-toggle .toggle-cta { justify-self: center; }
+}
+
+/* ========== Results Table ========== */
+.results-table-wrap {
+  overflow-x: auto; margin-top: 20px;
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.results-table {
+  width: 100%; border-collapse: collapse; font-size: 0.8rem;
+  white-space: nowrap;
+}
+.results-table th {
+  padding: 8px 10px; text-align: center; font-weight: 600;
+  color: #7c3aed; border-bottom: 2px solid #e0e7ff;
+  font-size: 0.78rem; letter-spacing: 0.3px;
+}
+.results-table th:first-child { text-align: left; }
+.results-table td {
+  padding: 5px 10px; text-align: center; color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+}
+.results-table td:first-child { text-align: left; color: #1e293b; font-weight: 500; }
+.results-table .domain-header {
+  background: #eef2ff; color: #7c3aed;
+  font-weight: 600; text-align: center; font-size: 0.8rem; letter-spacing: 0.5px;
+}
+.results-table .domain-header td { text-align: center; color: #7c3aed; font-weight: 600; }
+.results-table .ee-row { background: #fafbfd; }
+.results-table .ee-row td { color: #64748b; font-style: italic; }
+.results-table td.pos, .results-table td.pos.te-col { color: #16a34a !important; }
+.results-table td.neg, .results-table td.neg.te-col { color: #dc2626 !important; }
+.results-table td.te-col:not(.pos):not(.neg) { color: #475569 !important; }
+.results-table .ee-row td { color: #64748b !important; font-style: italic; }
+.results-table .ee-row td.best, .results-table .ee-row td.second { color: #64748b !important; }
+span.pos { color: #16a34a; }
+span.neg { color: #dc2626; }
+.te-col { font-weight: 600; }
+.best { font-weight: 800; }
+.second { text-decoration: underline; }
+.model-icon { height: 1.15em; vertical-align: -0.15em; margin-right: 4px; }
+
+/* ========== Figure Grid ========== */
+.fig-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px;
+}
+.fig-card {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 16px; transition: border-color 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.fig-card:hover { border-color: #a5b4fc; }
+.fig-card img { width: 100%; border-radius: 8px; display: block; background: #fff; padding: 8px; }
+.fig-card-caption {
+  margin-top: 12px; font-size: 0.82rem; color: #64748b; line-height: 1.5;
+}
+.fig-card-caption strong { color: #7c3aed; }
+
+/* ========== Stage Rows (RQ2): one stage card + one figure per row ========== */
+.stage-rows { display: flex; flex-direction: column; gap: 32px; margin-top: 16px; }
+.stage-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 32px;
+  align-items: stretch;
+}
+.stage-row.reverse { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.stage-row.reverse .stage-row-card { order: 2; }
+.stage-row.reverse .stage-row-fig { order: 1; }
+
+.stage-row-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 30px 30px 26px;
+  display: flex; flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  position: relative; overflow: hidden;
+}
+.stage-row-card:hover { border-color: #c7d2fe; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(124,58,237,0.08); }
+.stage-row-card::before {
+  content: ''; position: absolute; top: 0; left: 0; bottom: 0;
+  width: 4px;
+  transition: opacity 0.3s; opacity: 0.85;
+}
+.stage-row-card.stage-exp::before { background: linear-gradient(180deg, #2563eb, #4f46e5); }
+.stage-row-card.stage-ext::before { background: linear-gradient(180deg, #7c3aed, #a78bfa); }
+.stage-row-card.stage-con::before { background: linear-gradient(180deg, #16a34a, #4ade80); }
+
+.stage-row-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.stage-row-card.stage-exp .stage-row-tag { color: #2563eb; }
+.stage-row-card.stage-ext .stage-row-tag { color: #ec4899; }
+.stage-row-card.stage-con .stage-row-tag { color: #16a34a; }
+.stage-row-tag .stage-idx {
+  background: currentColor;
+  color: #fff;
+  padding: 2px 8px; border-radius: 4px;
+  letter-spacing: 0.1em;
+}
+.stage-row-card.stage-exp .stage-row-tag .stage-idx { color: #fff; background: #2563eb; }
+.stage-row-card.stage-ext .stage-row-tag .stage-idx { color: #fff; background: #ec4899; }
+.stage-row-card.stage-con .stage-row-tag .stage-idx { color: #fff; background: #16a34a; }
+
+.stage-row-card h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.45rem; font-weight: 600; color: #0f172a;
+  margin-bottom: 14px; line-height: 1.25; letter-spacing: -0.015em;
+}
+.stage-row-card h3 .accent {
+  font-style: italic;
+  background: linear-gradient(135deg, #4f46e5 0%, #ec4899 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  padding-right: 0.12em;
+  margin-right: -0.12em;
+}
+.stage-row-card p { font-size: 0.95rem; color: #475569; line-height: 1.65; margin-bottom: 12px; }
+.stage-row-card p:last-child { margin-bottom: 0; }
+.stage-row-card p em { font-style: italic; color: #1e293b; }
+.stage-row-card p strong { font-weight: 700; color: #0f172a; }
+.stage-row-card.stage-exp p strong { color: #2563eb; }
+.stage-row-card.stage-ext p strong { color: #ec4899; }
+.stage-row-card.stage-con p strong { color: #16a34a; }
+.stage-row-card .stage-stat {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 600; color: #0f172a;
+  line-height: 1.1;
+}
+.stage-row-card .stage-stat .num { font-size: 1.25rem; letter-spacing: -0.02em; line-height: 1.1; }
+.stage-row-card.stage-exp .stage-stat .num { color: #2563eb; }
+.stage-row-card.stage-ext .stage-stat .num { color: #ec4899; }
+.stage-row-card.stage-con .stage-stat .num { color: #16a34a; }
+.stage-row-card .stage-stat .lbl { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.8rem; color: #64748b; line-height: 1.1; }
+.stage-row-card .stage-stat.stat-stack {
+  flex-direction: column; align-items: flex-start; gap: 6px;
+}
+.stage-row-card .stage-stat.stat-stack .lbl { line-height: 1.45; max-width: 320px; }
+.stage-row-card .stage-stat-row {
+  display: flex; gap: 18px; flex-wrap: wrap; row-gap: 8px;
+  padding: 10px 0 2px;
+  border-top: 1px dashed #e2e8f0;
+  margin-top: 4px;
+}
+
+.stage-row-fig {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px;
+  display: flex; flex-direction: column; justify-content: center;
+  transition: border-color 0.25s ease;
+}
+.stage-row-fig:hover { border-color: #a5b4fc; }
+.stage-row-fig img { width: 100%; height: auto; border-radius: 8px; display: block; }
+.stage-row-fig .fig-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #94a3b8; margin-bottom: 8px;
+}
+.stage-row-fig .fig-cap {
+  margin-top: 14px; font-size: 0.82rem; color: #64748b; line-height: 1.55; text-align: center;
+}
+
+@media (max-width: 880px) {
+  .stage-row, .stage-row.reverse { grid-template-columns: 1fr; }
+  .stage-row.reverse .stage-row-card { order: 1; }
+  .stage-row.reverse .stage-row-fig { order: 2; }
+}
+
+/* ========== Stats ========== */
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 20px; margin-top: 32px;
+}
+.stat {
+  text-align: center; padding: 28px 16px;
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 14px; transition: all 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.stat:hover { border-color: #a5b4fc; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.08); }
+.stat-number {
+  font-size: 2.2rem; font-weight: 800;
+  background: linear-gradient(135deg, #4f46e5, #ec4899);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-label { font-size: 0.82rem; color: #94a3b8; margin-top: 6px; font-weight: 500; }
+
+/* ========== BibTeX ========== */
+.bibtex-box {
+  position: relative; background: #1e293b;
+  border: 1px solid #334155; border-radius: 12px;
+  padding: 20px 24px; margin-top: 16px; overflow-x: auto;
+}
+.bibtex-box pre {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+  color: #94a3b8; line-height: 1.6; white-space: pre; margin: 0;
+}
+.copy-btn {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.3);
+  color: #a5b4fc; padding: 6px 14px; border-radius: 6px;
+  font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.copy-btn:hover { background: rgba(124,58,237,0.35); }
+.copy-btn.copied { background: rgba(34,197,94,0.2); border-color: rgba(34,197,94,0.3); color: #86efac; }
+
+/* ========== Footer ========== */
+footer {
+  padding: 40px 0; text-align: center;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.82rem; color: #94a3b8;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  .pipeline { grid-template-columns: 1fr; gap: 16px; }
+  .pipeline-arrow { transform: rotate(90deg); padding: 0; }
+  .fig-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .hero { padding: 60px 16px 40px; }
+  section { padding: 50px 0; }
+  .cards { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ========== Top Navigation Bar ========== */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 48px;
+  background: rgba(255,255,255,0.35);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid rgba(226,232,240,0);
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+.navbar.scrolled {
+  background: rgba(255,255,255,0.62);
+  border-bottom: 1px solid rgba(226,232,240,0.5);
+  box-shadow: 0 2px 16px rgba(15,23,42,0.05);
+}
+.navbar-logos {
+  display: flex; align-items: center; gap: 22px;
+}
+.navbar-logos img { height: 46px; opacity: 0.9; transition: opacity 0.3s; }
+.navbar-logos img:hover { opacity: 1; }
+.navbar-brand {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.45rem; font-weight: 600; letter-spacing: -0.015em;
+  color: #0f172a; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 2px;
+  transition: opacity 0.25s ease;
+}
+.navbar-brand:hover { opacity: 0.85; }
+.navbar-brand .brand-skill { color: #0f172a; }
+.navbar-brand .brand-lens {
+  background: linear-gradient(110deg, #0ea5e9 0%, #4f46e5 25%, #7c3aed 50%, #ec4899 78%, #f59e0b 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-style: italic;
+  display: inline-block;
+  padding-right: 0.15em;
+  margin-right: -0.15em;
+}
+.navbar-divider {
+  width: 1px; height: 30px; background: #cbd5e1;
+}
+.navbar-related {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 12px 5px 10px;
+  border: 1px solid rgba(13,148,136,0.22);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.navbar-related:hover {
+  transform: translateY(-1px);
+  border-color: rgba(13,148,136,0.45);
+  box-shadow: 0 4px 14px rgba(13,148,136,0.18);
+}
+.navbar-related .nr-icon {
+  width: 14px; height: 14px;
+  background: linear-gradient(135deg, #bb352d 0 48%, #b17300 48% 66%, #0b7974 66%);
+  border: 1px solid rgba(255,255,255,0.85);
+  transform: rotate(45deg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+.navbar-related .nr-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0d9488; font-weight: 600;
+}
+.navbar-related .nr-name {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700; font-size: 0.98rem;
+  background: linear-gradient(135deg, #0b7974, #0d9488);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.01em;
+}
+.navbar-links {
+  display: flex; align-items: center; gap: 32px;
+}
+.navbar-links a {
+  font-size: 1rem; font-weight: 500; color: #475569;
+  transition: color 0.2s;
+}
+.navbar-links a:hover { color: #7c3aed; }
+
+.hero { padding-top: 140px; }
+
+/* ===== Side TOC ===== */
+.side-toc {
+  position: fixed;
+  top: 50%;
+  left: 28px;
+  transform: translateY(-50%);
+  z-index: 90;
+  padding: 18px 14px 18px 18px;
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226,232,240,0.8);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.06);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-12px, -50%);
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s;
+  max-width: 200px;
+}
+.side-toc.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, -50%);
+}
+.side-toc-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding-left: 14px;
+}
+.side-toc ul {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+  gap: 2px;
+}
+.side-toc a {
+  position: relative;
+  display: flex; align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+.side-toc a::before {
+  content: "";
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex-shrink: 0;
+  transition: background 0.25s, transform 0.25s, box-shadow 0.25s;
+}
+.side-toc a:hover {
+  color: #1e293b;
+  background: rgba(241,245,249,0.7);
+}
+.side-toc a:hover::before { background: #94a3b8; }
+.side-toc a.active {
+  color: #7c3aed;
+  background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(245,158,11,0.06));
+  font-weight: 600;
+}
+.side-toc a.active::before {
+  background: #7c3aed;
+  transform: scale(1.6);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+}
+@media (max-width: 1280px) {
+  .side-toc { display: none; }
+}
+
+@media (max-width: 640px) {
+  .navbar { padding: 12px 18px; }
+  .navbar-logos img { height: 32px; }
+  .navbar-links { gap: 16px; }
+  .navbar-links a { font-size: 0.85rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== Top Navigation ==================== -->
+<nav class="navbar" id="navbar">
+  <div class="navbar-logos">
+    <a href="#" class="navbar-brand"><span class="brand-skill">Skill</span><span class="brand-lens">Lens</span></a>
+    <a href="https://microsoft.github.io/SkillOpt/" class="navbar-related" target="_blank" rel="noopener" title="Companion project: SkillOpt">
+      <span class="nr-icon" aria-hidden="true"></span>
+      <span class="nr-name">SkillOpt</span>
+    </a>
+    <div class="navbar-divider"></div>
+    <img src="static/images/fudan.png" alt="Fudan University">
+    <img src="static/images/microsoft.png" alt="Microsoft Research">
+  </div>
+  <div class="navbar-links">
+    <a href="#motivation">Motivation</a>
+    <a href="#overview">Framework</a>
+    <a href="#rq1">Main Results</a>
+    <a href="#rq2">Analysis</a>
+    <a href="#rq3">Intervention</a>
+    <a href="#citation">Citation</a>
+  </div>
+</nav>
+
+<!-- ==================== Side TOC ==================== -->
+<aside class="side-toc" id="sideToc" aria-label="Section navigation">
+  <div class="side-toc-title">On this page</div>
+  <ul>
+    <li><a href="#motivation" data-section="motivation">Motivation</a></li>
+    <li><a href="#overview" data-section="overview">Framework</a></li>
+    <li><a href="#rq1" data-section="rq1">RQ1 · Main Results</a></li>
+    <li><a href="#rq2" data-section="rq2">RQ2 · Analysis</a></li>
+    <li><a href="#rq3" data-section="rq3">RQ3 · Intervention</a></li>
+    <li><a href="#citation" data-section="citation">Citation</a></li>
+  </ul>
+</aside>
+
+<!-- ==================== Hero ==================== -->
+<header class="hero">
+  <div class="hero-inner reveal">
+    <div class="hero-wordmark"><span class="wm-skill">Skill</span><span class="wm-lens">Lens</span></div>
+    <h1><span class="connector">From</span><span class="highlight-1">Raw Experience</span><span class="connector">to</span><span class="highlight-2">Skill Consumption</span></h1>
+    <p class="subtitle">A <em>Systematic Study</em> of Model-Generated Agent Skills</p>
+    <p class="authors">
+      <strong>Zisu Huang</strong><sup>1,2,*,†</sup>&ensp;
+      <strong>Jingwen Xu</strong><sup>1,*</sup>&ensp;
+      <strong>Yifan Yang</strong><sup>2,‡</sup>&ensp;
+      <strong>Ziyang Gong</strong><sup>3</sup>&ensp;
+      <strong>Qihao Yang</strong><sup>3</sup><br>
+      <strong>Muzhao Tian</strong><sup>1</sup>&ensp;
+      <strong>Xiaohua Wang</strong><sup>1</sup>&ensp;
+      <strong>Changze Lv</strong><sup>1</sup>&ensp;
+      <strong>Xuemei Gao</strong><sup>2</sup>&ensp;
+      <strong>Qi Dai</strong><sup>2</sup>&ensp;
+      <strong>Bei Liu</strong><sup>2</sup>&ensp;
+      <strong>Kai Qiu</strong><sup>2</sup><br>
+      <strong>Xue Yang</strong><sup>3</sup>&ensp;
+      <strong>Dongdong Chen</strong><sup>2</sup>&ensp;
+      <strong>Xiaoqing Zheng</strong><sup>1,‡</sup>&ensp;
+      <strong>Chong Luo</strong><sup>2</sup>
+    </p>
+    <p class="affiliations">
+      <sup>1</sup> Fudan University &emsp;
+      <sup>2</sup> Microsoft Research &emsp;
+      <sup>3</sup> Shanghai Jiao Tong University<br>
+      <span style="font-size:0.78rem;">* Equal contribution &ensp; † Work done during an internship at MSRA &ensp; ‡ Corresponding authors</span>
+    </p>
+    <div class="btn-group">
+      <a class="btn btn-outline" href="./" target="_blank">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 2A1.5 1.5 0 0 0 4 3.5v17A1.5 1.5 0 0 0 5.5 22h13a1.5 1.5 0 0 0 1.5-1.5V9.621a1.5 1.5 0 0 0-.44-1.06l-6.12-6.122A1.5 1.5 0 0 0 12.379 2H5.5Zm7 1.5v5a1 1 0 0 0 1 1h5l-6-6Zm-5 9.25a.75.75 0 0 1 .75-.75h8a.75.75 0 0 1 0 1.5h-8a.75.75 0 0 1-.75-.75Zm0 3.5a.75.75 0 0 1 .75-.75h8a.75.75 0 0 1 0 1.5h-8a.75.75 0 0 1-.75-.75Z"/></svg>
+        Paper
+      </a>
+      <a class="btn btn-outline" href="https://aka.ms/SkillLens" target="_blank" rel="noopener">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+        Code
+      </a>
+    </div>
+    <a class="related-work" href="https://microsoft.github.io/SkillOpt/" target="_blank" rel="noopener">
+      <span class="rw-icon" aria-hidden="true"></span>
+      <span class="rw-text">
+        <span class="rw-tag">Also check out</span>
+        <span class="rw-title"><strong>SkillOpt</strong> · Controllable Text-Space Optimization for Agent Skills</span>
+      </span>
+      <span class="rw-arrow" aria-hidden="true">→</span>
+    </a>
+  </div>
+</header>
+
+<!-- ==================== Motivation ==================== -->
+<section id="motivation">
+  <div class="container">
+    <div class="section-header" data-num="01">
+      <div class="section-label">Motivation</div>
+      <h2 class="section-title">Why study <span class="accent">model-generated</span> skills?</h2>
+    </div>
+
+    <p class="motivation-lead">
+      Language agents improve by reusing <em>skills</em>—structured procedural artifacts distilled from past experience.
+    </p>
+
+    <div class="motivation-body">
+      <p>
+        Among them, <em>domain-level</em> skills—which package a domain's recurring procedures into a single reusable artifact—have become a standard component in commercial agent platforms, but hand-crafting them cannot scale. <em>Model-generated skills</em> are the only path forward, making them the form most likely to shape real agent systems at deployment scale.
+      </p>
+    </div>
+
+    <div class="gap-callout">
+      <div class="gap-callout-label">This Study</div>
+      <div class="gap-callout-text">
+        We present a comprehensive study of <span class="hl-domain">domain-level</span>, <span class="hl-modelgen">model-generated</span> skills across the full lifecycle, organized around three research questions.
+      </div>
+    </div>
+
+    <div class="rq-preview">
+      <div class="rq-item">
+        <div class="rq-item-head">
+          <span class="rq-tag">RQ1</span>
+          <h4>Do they work?</h4>
+        </div>
+        <p>Do model-generated, domain-level skills reliably benefit downstream agents across targets, extractors, and domains?</p>
+      </div>
+      <div class="rq-item">
+        <div class="rq-item-head">
+          <span class="rq-tag">RQ2</span>
+          <h4>What drives utility?</h4>
+        </div>
+        <p>Across the three lifecycle stages, what actually determines a skill's downstream utility?</p>
+      </div>
+      <div class="rq-item">
+        <div class="rq-item-head">
+          <span class="rq-tag">RQ3</span>
+          <h4>Can we improve it?</h4>
+        </div>
+        <p>Can our empirical findings be turned into a concrete, drop-in improvement to skill extraction itself?</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Lifecycle Pipeline ==================== -->
+<section id="overview">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-header" data-num="02">
+        <div class="section-label">Framework</div>
+        <h2 class="section-title">The Skill <span class="accent">Lifecycle</span></h2>
+        <p class="section-desc">We evaluate the full experience-to-skill lifecycle across three stages, systematically varying extractor and target models across five diverse domains.</p>
+      </div>
+    </div>
+
+    <div class="pipeline reveal">
+      <div class="pipeline-stage stage-1">
+        <div class="stage-icon">🎯</div>
+        <div class="stage-title">Experience Generation</div>
+        <div class="stage-desc">Target agent rolls out tasks to form an experience pool.</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage stage-2">
+        <div class="stage-icon">⚗️</div>
+        <div class="stage-title">Skill Extraction</div>
+        <div class="stage-desc">Extractor distills the pool into a reusable domain-level skill.</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-stage stage-3">
+        <div class="stage-icon">🚀</div>
+        <div class="stage-title">Skill Consumption</div>
+        <div class="stage-desc">Skill is loaded back into the target and evaluated.</div>
+      </div>
+    </div>
+
+    <div class="figure-wrap reveal">
+      <img src="static/images/overview.png" alt="SkillLens overview figure" loading="lazy">
+      <p class="figure-caption"><strong>Figure 1.</strong> Overview of our study design across the three lifecycle stages.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== RQ1: Main Results ==================== -->
+<section id="rq1">
+  <div class="container-wide">
+    <div class="section-header reveal" data-num="03">
+      <div class="section-label">RQ1 · Main Results</div>
+      <h2 class="section-title">Are Model-Generated Skills <span class="accent">Effective?</span></h2>
+      <p class="section-desc">A large-scale evaluation across 5 domains × 6 targets × 5 extractors. We first introduce the three metrics that ground the study, then summarize three headline findings.</p>
+    </div>
+
+    <!-- ===== Metric Definitions (now upfront) ===== -->
+    <div class="metrics-block reveal">
+      <!-- Δ : the primary unit -->
+      <div class="metric-primary">
+        <div class="metric-formula">
+          <span class="form-pos">Score<sub>with skill</sub></span><span class="form-eq">−</span><span class="form-neg">Score<sub>baseline</sub></span>
+        </div>
+        <div class="metric-body">
+          <div class="metric-head">
+            <span class="metric-symbol">Δ</span>
+            <span class="metric-name">Performance Delta</span>
+          </div>
+          <p class="metric-desc">The atomic unit of every cell in the table. <span class="pos">Δ &gt; 0</span> means the skill helped this (extractor, target) pair; <span class="neg">Δ &lt; 0</span> means negative transfer.</p>
+        </div>
+      </div>
+
+      <!-- EE / TE : aggregated views -->
+      <div class="metrics-pair">
+        <div class="metric-sub ee">
+          <div class="metric-tag">Per Extractor</div>
+          <div class="metric-head">
+            <span class="metric-symbol">EE</span>
+            <span class="metric-name">Extraction Efficacy</span>
+          </div>
+          <p class="metric-desc">For a <strong>fixed extractor</strong>, average Δ across all targets — how reliably the extractor produces useful skills.</p>
+          <span class="metric-axis">avg<sub>target</sub> Δ</span>
+        </div>
+        <div class="metric-sub te">
+          <div class="metric-tag">Per Target</div>
+          <div class="metric-head">
+            <span class="metric-symbol">TE</span>
+            <span class="metric-name">Target Evolvability</span>
+          </div>
+          <p class="metric-desc">For a <strong>fixed target</strong>, average Δ across extractors that distill skills from <strong>its own trajectories</strong> — how much the target can improve from skills grounded in its own experience.</p>
+          <span class="metric-axis">avg<sub>extractor</sub> Δ</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Collapsible Full Results Panel ===== -->
+    <div class="reveal" style="margin-bottom: 44px;">
+      <button class="full-results-toggle" id="resultsToggle" type="button" aria-expanded="false">
+        <span class="toggle-icon">📊</span>
+        <span class="toggle-text">
+          <span class="toggle-tag">Table 1</span>
+          <span class="toggle-title">
+            <span class="explore-word">
+              <span class="explore-cursor">👉</span><span class="explore-text">Explore</span>
+            </span>
+            the full results matrix
+          </span>
+          <span class="toggle-sub">Per-cell Δ across 5 domains × 6 targets × 5 extractors, with EE/TE summaries.</span>
+        </span>
+        <span class="toggle-cta">
+          <span class="toggle-cta-text">Click to expand</span>
+          <span class="toggle-arrow">▾</span>
+        </span>
+      </button>
+
+      <div class="full-results-panel" id="resultsPanel">
+        <!-- FULL Results Table -->
+        <div class="results-table-wrap" style="margin-top:0;">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Target</th><th>Base</th><th><img class="model-icon" src="static/images/openai.png">GPT-5.4</th><th><img class="model-icon" src="static/images/openai.png">GPT-5.4-mini</th><th><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-Pro</th><th><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-FL</th><th><img class="model-icon" src="static/images/qwen-color.png">Qwen3.5-35B</th><th style="border-left:2px solid #c7d2fe">TE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ===== ALFWorld ===== -->
+          <tr class="domain-header"><td colspan="8">Embodied: ALFWorld</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4</td><td>68.66</td><td class="pos">+1.49</td><td class="pos">+6.47</td><td class="pos">+7.46</td><td class="pos">+4.98</td><td class="pos">+4.23</td><td class="te-col best" style="border-left:2px solid #e0e7ff">+4.93</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4-mini</td><td>52.24</td><td class="pos">+1.00</td><td class="pos">+4.23</td><td class="pos">+2.74</td><td class="pos">+2.24</td><td class="pos">+3.98</td><td class="te-col second" style="border-left:2px solid #e0e7ff">+2.84</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-Pro</td><td>87.56</td><td class="pos">+0.50</td><td class="pos">+0.75</td><td>+0.00</td><td class="neg">−0.75</td><td class="neg">−1.24</td><td class="te-col" style="border-left:2px solid #e0e7ff">−0.15</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-FL</td><td>51.99</td><td class="neg">−2.49</td><td class="neg">−1.24</td><td class="pos">+1.49</td><td class="neg">−2.49</td><td class="neg">−3.23</td><td class="te-col" style="border-left:2px solid #e0e7ff">−1.59</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-35B</td><td>57.21</td><td class="neg">−1.99</td><td class="neg">−3.48</td><td class="neg">−0.75</td><td class="pos">+0.50</td><td class="neg">−1.00</td><td class="te-col" style="border-left:2px solid #e0e7ff">−1.34</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-9B</td><td>36.07</td><td class="neg">−2.49</td><td class="neg">−2.99</td><td class="neg">−1.24</td><td class="neg">−1.99</td><td class="pos">+0.25</td><td class="te-col" style="border-left:2px solid #e0e7ff">−1.69</td></tr>
+          <tr class="ee-row"><td>EE</td><td></td><td>−0.66</td><td class="second">+0.62</td><td class="best">+1.62</td><td>+0.42</td><td>+0.50</td><td style="border-left:2px solid #e0e7ff"></td></tr>
+
+          <!-- ===== SpreadsheetBench ===== -->
+          <tr class="domain-header"><td colspan="8">Productivity: SpreadsheetBench</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4</td><td>37.17</td><td class="pos">+4.33</td><td class="pos">+9.00</td><td class="pos">+14.00</td><td class="pos">+14.66</td><td class="pos">+6.33</td><td class="te-col best" style="border-left:2px solid #e0e7ff">+9.66</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4-mini</td><td>29.33</td><td class="pos">+0.34</td><td class="pos">+2.50</td><td class="pos">+3.67</td><td class="pos">+4.50</td><td class="pos">+1.00</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.40</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-Pro</td><td>35.83</td><td class="neg">−0.50</td><td class="neg">−2.67</td><td class="pos">+6.50</td><td class="pos">+5.33</td><td class="pos">+5.83</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.90</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-FL</td><td>25.00</td><td class="pos">+2.67</td><td class="pos">+1.83</td><td class="pos">+1.50</td><td class="pos">+6.17</td><td class="pos">+7.33</td><td class="te-col second" style="border-left:2px solid #e0e7ff">+3.90</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-35B</td><td>23.83</td><td class="pos">+2.00</td><td class="pos">+5.50</td><td class="pos">+0.17</td><td class="pos">+3.34</td><td class="neg">−3.50</td><td class="te-col" style="border-left:2px solid #e0e7ff">+1.50</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-9B</td><td>13.67</td><td class="pos">+1.16</td><td class="pos">+3.16</td><td class="neg">−1.17</td><td class="pos">+1.16</td><td class="pos">+3.00</td><td class="te-col" style="border-left:2px solid #e0e7ff">+1.46</td></tr>
+          <tr class="ee-row"><td>EE</td><td></td><td>+1.67</td><td>+3.22</td><td class="second">+4.11</td><td class="best">+5.86</td><td>+3.33</td><td style="border-left:2px solid #e0e7ff"></td></tr>
+
+          <!-- ===== SWE-bench-Verified ===== -->
+          <tr class="domain-header"><td colspan="8">Coding: SWE-bench-Verified</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4</td><td>68.40</td><td class="pos">+4.67</td><td class="pos">+1.33</td><td class="pos">+2.00</td><td class="pos">+4.00</td><td class="pos">+2.27</td><td class="te-col second" style="border-left:2px solid #e0e7ff">+2.85</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4-mini</td><td>59.73</td><td class="pos">+3.20</td><td class="pos">+3.20</td><td class="pos">+1.73</td><td class="pos">+3.60</td><td class="pos">+2.80</td><td class="te-col best" style="border-left:2px solid #e0e7ff">+2.91</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-Pro</td><td>66.53</td><td class="pos">+2.00</td><td class="pos">+2.80</td><td class="pos">+2.13</td><td class="pos">+3.47</td><td class="neg">−1.60</td><td class="te-col" style="border-left:2px solid #e0e7ff">+1.76</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-FL</td><td>55.47</td><td class="pos">+2.67</td><td class="pos">+3.33</td><td class="pos">+2.93</td><td class="pos">+3.47</td><td class="neg">−0.93</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.29</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-35B</td><td>52.93</td><td class="pos">+3.20</td><td class="pos">+2.00</td><td class="pos">+2.53</td><td class="pos">+2.93</td><td class="pos">+2.00</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.53</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-9B</td><td>33.33</td><td class="neg">−1.07</td><td class="pos">+2.40</td><td class="neg">−1.60</td><td class="pos">+1.20</td><td class="pos">+0.93</td><td class="te-col" style="border-left:2px solid #e0e7ff">+0.37</td></tr>
+          <tr class="ee-row"><td>EE</td><td></td><td>+2.45</td><td class="second">+2.51</td><td>+1.62</td><td class="best">+3.11</td><td>+0.91</td><td style="border-left:2px solid #e0e7ff"></td></tr>
+
+          <!-- ===== SEAL-0 ===== -->
+          <tr class="domain-header"><td colspan="8">Web Search: SEAL-0</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4</td><td>51.24</td><td class="pos">+6.47</td><td class="pos">+4.23</td><td class="pos">+7.71</td><td class="pos">+1.74</td><td class="pos">+1.74</td><td class="te-col second" style="border-left:2px solid #e0e7ff">+4.38</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4-mini</td><td>45.27</td><td class="neg">−1.49</td><td class="pos">+3.23</td><td class="neg">−3.98</td><td class="pos">+3.98</td><td class="neg">−4.23</td><td class="te-col" style="border-left:2px solid #e0e7ff">−0.50</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-Pro</td><td>55.97</td><td class="neg">−4.23</td><td class="neg">−1.99</td><td class="pos">+1.99</td><td class="pos">+2.49</td><td class="neg">−3.48</td><td class="te-col" style="border-left:2px solid #e0e7ff">−1.04</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-FL</td><td>14.93</td><td class="pos">+9.45</td><td class="pos">+8.21</td><td class="pos">+2.99</td><td class="neg">−1.24</td><td class="pos">+7.21</td><td class="te-col best" style="border-left:2px solid #e0e7ff">+5.32</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-35B</td><td>40.55</td><td class="pos">+1.74</td><td class="pos">+6.47</td><td class="neg">−3.73</td><td class="pos">+4.73</td><td class="pos">+2.24</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.29</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-9B</td><td>33.83</td><td class="pos">+10.70</td><td class="pos">+8.96</td><td class="neg">−5.72</td><td class="pos">+5.97</td><td class="neg">−2.99</td><td class="te-col" style="border-left:2px solid #e0e7ff">+3.38</td></tr>
+          <tr class="ee-row"><td>EE</td><td></td><td class="second">+3.77</td><td class="best">+4.85</td><td>−0.12</td><td>+2.95</td><td>+0.08</td><td style="border-left:2px solid #e0e7ff"></td></tr>
+
+          <!-- ===== BFCL-v4 ===== -->
+          <tr class="domain-header"><td colspan="8">Tool Calling: BFCL-v4</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4</td><td>51.68</td><td class="pos">+3.08</td><td class="pos">+5.04</td><td class="pos">+0.42</td><td class="pos">+5.04</td><td class="neg">−2.24</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.27</td></tr>
+          <tr><td><img class="model-icon" src="static/images/openai.png">GPT-5.4-mini</td><td>53.50</td><td class="pos">+3.92</td><td class="pos">+6.16</td><td class="pos">+7.56</td><td class="pos">+5.18</td><td class="pos">+2.94</td><td class="te-col best" style="border-left:2px solid #e0e7ff">+5.15</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-Pro</td><td>51.82</td><td class="pos">+5.32</td><td class="pos">+5.88</td><td class="neg">−4.34</td><td class="pos">+0.14</td><td class="pos">+6.02</td><td class="te-col" style="border-left:2px solid #e0e7ff">+2.60</td></tr>
+          <tr><td><img class="model-icon" src="static/images/gemini-color.png">Gem-3.1-FL</td><td>41.18</td><td class="pos">+4.06</td><td class="pos">+4.62</td><td class="pos">+4.20</td><td class="pos">+8.12</td><td class="pos">+3.64</td><td class="te-col second" style="border-left:2px solid #e0e7ff">+4.93</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-35B</td><td>57.56</td><td class="neg">−0.70</td><td class="pos">+0.84</td><td class="pos">+1.54</td><td class="pos">+2.80</td><td class="pos">+1.82</td><td class="te-col" style="border-left:2px solid #e0e7ff">+1.26</td></tr>
+          <tr><td><img class="model-icon" src="static/images/qwen-color.png">Qwen-9B</td><td>46.78</td><td class="pos">+2.94</td><td class="pos">+2.94</td><td class="pos">+1.82</td><td class="neg">−0.98</td><td class="neg">−1.12</td><td class="te-col" style="border-left:2px solid #e0e7ff">+1.12</td></tr>
+          <tr class="ee-row"><td>EE</td><td></td><td>+3.10</td><td class="best">+4.25</td><td>+1.87</td><td class="second">+3.38</td><td>+1.84</td><td style="border-left:2px solid #e0e7ff"></td></tr>
+        </tbody>
+      </table>
+      <p class="figure-caption" style="margin-top:12px;"><strong>Table 1.</strong> Skill-induced performance gain (Δ) across all five domains. <span class="pos">Green</span>: Δ &gt; 0; <span class="neg">Red</span>: Δ &lt; 0. <span class="best">Bold</span>: best TE/EE; <span class="second">Underline</span>: second best.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Three Headline Findings ===== -->
+    <div class="reveal" style="margin-bottom: 18px;">
+      <div class="section-label" style="margin-bottom: 12px;">Three Headline Findings</div>
+    </div>
+    <div class="cards">
+      <div class="card reveal reveal-delay-1">
+        <div class="finding-tag">Finding 01</div>
+        <div class="finding-stat"><span class="stat-pos">75%</span><span class="stat-sep">/</span><span class="stat-neg">25%</span></div>
+        <h3>Beneficial on average, but not guaranteed</h3>
+        <p>Skills help in 75% of extractor–target pairs, yet 25% suffer <strong>negative transfer</strong>. Domain-dependent: ALFWorld is the most fragile (47% negative).</p>
+      </div>
+      <div class="card reveal reveal-delay-2">
+        <div class="finding-tag">Finding 02</div>
+        <div class="finding-stat">Better <span class="role-executor">Executor</span><span class="role-neq">≠</span>Better <span class="role-extractor">Extractor</span></div>
+        <h3>Skill extraction is a distinct capability</h3>
+        <p>On SpreadsheetBench, lightweight <strong>Gemini-3.1-FL leads on EE</strong>; the strongest executor, GPT-5.4, ranks last. Choosing an extractor is a compatibility problem, not a strength contest.</p>
+      </div>
+      <div class="card reveal reveal-delay-3">
+        <div class="finding-tag">Finding 03</div>
+        <div class="finding-stat"><span class="stat-pos">+4.93</span><span class="stat-sep">vs</span><span class="stat-neg">−1.69</span></div>
+        <h3>Skill utility is target-dependent</h3>
+        <p>Fix the domain and the extractors, swap only the target: on ALFWorld, GPT-5.4 gains TE = +4.93 while Qwen-9B drops to −1.69. The same skill becomes useful or harmful depending on who consumes it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== RQ2: Lifecycle Analysis ==================== -->
+<section id="rq2">
+  <div class="container">
+    <div class="section-header reveal" data-num="04">
+      <div class="section-label">RQ2 · In-Depth Analysis</div>
+      <h2 class="section-title">What Drives <span class="accent">Skill Utility?</span></h2>
+      <p class="section-desc">We dissect each lifecycle stage—experience, extraction, consumption—to understand what factors actually govern downstream gains.</p>
+    </div>
+
+    <div class="stage-rows">
+
+      <!-- Row 1 · Experience -->
+      <div class="stage-row reveal">
+        <div class="stage-row-card stage-exp">
+          <div class="stage-row-tag"><span class="stage-idx">Stage 01</span> Raw Experience</div>
+          <h3>The <span class="accent">success–failure ratio</span> of experience shapes skill quality.</h3>
+          <p>Trajectory success ratio is not a knob with a single optimum—<em>the right mix depends on the domain</em>. Successful trajectories anchor the procedure, but well-chosen failures reveal where the agent breaks.</p>
+          <p>All-failure pools consistently produce the worst skills. Between the two ends, ALFWorld benefits from failure-heavy mixes, while SpreadsheetBench peaks with success-heavy ones.</p>
+          <div class="stage-stat-row">
+            <div class="stage-stat"><span class="num">success-heavy</span><span class="lbl">SpreadsheetBench</span></div>
+            <div class="stage-stat"><span class="num">failure-heavy</span><span class="lbl">ALFWorld</span></div>
+          </div>
+        </div>
+        <div class="stage-row-fig">
+          <div class="fig-num">Figure · Raw Experience</div>
+          <img src="static/images/experience_ratio.png" alt="Experience ratio analysis" loading="lazy">
+          <p class="fig-cap">Performance gain vs. success ratio in the experience pool. Optimal ratio is domain-specific, not universal.</p>
+        </div>
+      </div>
+
+      <!-- Row 2 · Extraction (reversed) -->
+      <div class="stage-row reverse reveal">
+        <div class="stage-row-card stage-ext">
+          <div class="stage-row-tag"><span class="stage-idx">Stage 02</span> Skill Extraction</div>
+          <h3>Surface plausibility does <span class="accent">not</span> predict utility.</h3>
+          <p>An LLM judge asked to compare two skills picks the better one only 46.4% of the time—worse than chance—<em>and accuracy drops as the utility gap grows</em>.</p>
+          <p>Format alone is also inert: rewriting the same skill into different surface formats yields statistically indistinguishable downstream gains (paired test, <em>p &gt; 0.34</em>). What actually matters is concrete failure mechanisms with executable remedies—not generic advice.</p>
+          <div class="stage-stat-row">
+            <div class="stage-stat"><span class="num">46.4%</span><span class="lbl">judge accuracy</span></div>
+            <div class="stage-stat"><span class="num">p &gt; 0.34</span><span class="lbl">format change, no effect</span></div>
+          </div>
+        </div>
+        <div class="stage-row-fig">
+          <div class="fig-num">Figure · Skill Extraction</div>
+          <img src="static/images/pairwise_accuracy.png" alt="Pairwise judge accuracy" loading="lazy">
+          <p class="fig-cap">Pairwise judge accuracy drops as the actual utility gap grows—the skill that <em>reads</em> better often <em>performs</em> worse.</p>
+        </div>
+      </div>
+
+      <!-- Row 3 · Consumption -->
+      <div class="stage-row reveal">
+        <div class="stage-row-card stage-con">
+          <div class="stage-row-tag"><span class="stage-idx">Stage 03</span> Skill Consumption</div>
+          <h3>The same skill, <span class="accent">different</span> consumers, opposite outcomes.</h3>
+          <p>Transfer is highly target-dependent. Skills extracted from strong experience pools transfer robustly to other targets; skills from weak pools cause negative transfer on some.</p>
+          <p>Mechanistically, skills <em>reshape the target's default policy</em> rather than triggering explicit skill calls—so consumption ability is shaped by what the target can already act on.</p>
+          <div class="stage-stat-row">
+            <div class="stage-stat"><span class="num">target-dependent</span><span class="lbl">transfer pattern</span></div>
+            <div class="stage-stat"><span class="num">reshapes policy</span><span class="lbl">mechanism of effect</span></div>
+          </div>
+        </div>
+        <div class="stage-row-fig">
+          <div class="fig-num">Figure · Skill Consumption</div>
+          <img src="static/images/consumption_transfer.png" alt="Cross-model skill transfer" loading="lazy">
+          <p class="fig-cap">Cross-model transfer matrix. Strong-pool skills help every target; weak-pool skills produce mixed or negative results.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==================== RQ3: Intervention ==================== -->
+<section id="rq3">
+  <div class="container">
+    <div class="section-header reveal" data-num="05">
+      <div class="section-label">RQ3 · From Diagnosis to Intervention</div>
+      <h2 class="section-title"><span class="accent">Meta-Skill</span> Guided Extraction</h2>
+      <p class="section-desc">Can we turn the analysis findings into a concrete, drop-in improvement to skill extraction?</p>
+    </div>
+
+    <div class="stage-rows">
+      <!-- Row 1 · Rubric Discovery + Meta-Skill Prior, side-by-side -->
+      <div class="stage-row reveal" style="grid-template-columns: 1fr 1fr;">
+        <div class="stage-row-card stage-ext">
+          <div class="stage-row-tag"><span class="stage-idx">Step 01</span> Diagnose</div>
+          <h3>Three textual dimensions <span class="accent">predict</span> utility.</h3>
+          <p>An automated pipeline contrasts high- vs. low-utility skill pairs and surfaces three validated dimensions: <strong>failure-mechanism encoding</strong>, <strong>actionable specificity</strong>, and a <strong>high-risk action blacklist</strong>—each individually raising better-rate above 64%.</p>
+          <div class="stage-stat-row">
+            <div class="stage-stat stat-stack"><span class="num">46.4% → 73.8%</span><span class="lbl">pairwise-judge accuracy at picking the truly better skill</span></div>
+          </div>
+        </div>
+        <div class="stage-row-card stage-con">
+          <div class="stage-row-tag"><span class="stage-idx">Step 02</span> Intervene</div>
+          <h3>The rubric becomes a <span class="accent">drop-in</span> meta-skill.</h3>
+          <p>We compile the validated rubric into a compact <strong>meta-skill</strong> prepended to the extractor's prompt—<em>no pipeline changes, no extra calls</em>—turning diagnostic findings into a measurable downstream gain that is <strong>consistent across extractors and domains</strong>.</p>
+          <div class="stage-stat-row">
+            <div class="stage-stat stat-stack"><span class="num">+1.55 pp</span><span class="lbl">average gain over baseline</span></div>
+            <div class="stage-stat stat-stack"><span class="num">9 / 9</span><span class="lbl">(domain × target) cells improved</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal" style="margin-top:24px;">
+      <div class="stage-row-fig" style="background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:24px; box-shadow:0 2px 12px rgba(15,23,42,0.04);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          <span style="font-family:'JetBrains Mono', monospace; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:#16a34a; background:rgba(22,163,74,0.08); padding:4px 10px; border-radius:999px; font-weight:600;">Figure · Meta-Skill Effect</span>
+          <span style="font-size:0.9rem; color:#475569;">Meta-skill consistently lifts skill utility across domains and targets</span>
+        </div>
+        <img src="static/images/meta_skill_slope.png" alt="Meta-skill slope improvement" style="width:100%; height:auto; border-radius:12px; display:block;">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== BibTeX ==================== -->
+<section id="citation">
+  <div class="container reveal">
+    <div class="section-header" data-num="06">
+      <div class="section-label">BibTeX</div>
+      <h2 class="section-title"><span class="accent">Citation</span></h2>
+    </div>
+    <div class="bibtex-box">
+      <button class="copy-btn" onclick="copyBibtex(this)">Copy</button>
+      <pre><code>@misc{huang2026skilllens,
+  title  = {From Raw Experience to Skill Consumption: A Systematic Study of Model-Generated Agent Skills},
+  author = {Huang, Zisu and Xu, Jingwen and Yang, Yifan and Gong, Ziyang and Yang, Qihao and Tian, Muzhao and Wang, Xiaohua and Lv, Changze and Gao, Xuemei and Dai, Qi and Liu, Bei and Qiu, Kai and Yang, Xue and Chen, Dongdong and Zheng, Xiaoqing and Luo, Chong},
+  year   = {2026},
+  note   = {arXiv preprint, to appear}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Footer ==================== -->
+<footer>
+  <div class="container">
+    <p>SkillLens &copy; 2026 &mdash; Fudan University &amp; Microsoft Research</p>
+  </div>
+</footer>
+
+<!-- ==================== JS ==================== -->
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0, rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Navbar scrolled state
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 40) navbar.classList.add('scrolled');
+  else navbar.classList.remove('scrolled');
+});
+
+// Copy BibTeX
+function copyBibtex(btn) {
+  const text = btn.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Toggle full results panel
+(function() {
+  const toggle = document.getElementById('resultsToggle');
+  const panel = document.getElementById('resultsPanel');
+  if (!toggle || !panel) return;
+  const ctaText = toggle.querySelector('.toggle-cta-text');
+  const tag = toggle.querySelector('.toggle-tag');
+  toggle.addEventListener('click', () => {
+    const isOpen = toggle.classList.toggle('is-open');
+    panel.classList.toggle('is-open', isOpen);
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (ctaText) ctaText.textContent = isOpen ? 'Click to collapse' : 'Click to expand';
+    if (tag) tag.textContent = isOpen ? 'Table 1 · Showing' : 'Table 1 · Hidden by default';
+  });
+})();
+
+// Side TOC: show after hero scroll-past + active section spy
+(function() {
+  const toc = document.getElementById('sideToc');
+  if (!toc) return;
+  const links = Array.from(toc.querySelectorAll('a[data-section]'));
+  const sections = links
+    .map(a => document.getElementById(a.dataset.section))
+    .filter(Boolean);
+
+  // Show/hide based on scroll position (hide while in hero)
+  const hero = document.querySelector('.hero');
+  function updateVisibility() {
+    const heroBottom = hero ? hero.getBoundingClientRect().bottom : 0;
+    if (heroBottom < 80) toc.classList.add('visible');
+    else toc.classList.remove('visible');
+  }
+  window.addEventListener('scroll', updateVisibility, { passive: true });
+  updateVisibility();
+
+  // Scroll spy: highlight section nearest to top
+  function updateActive() {
+    const probe = window.innerHeight * 0.3;
+    let current = sections[0];
+    for (const sec of sections) {
+      const rect = sec.getBoundingClientRect();
+      if (rect.top - probe <= 0) current = sec;
+    }
+    links.forEach(a => {
+      a.classList.toggle('active', a.dataset.section === current.id);
+    });
+  }
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+})();
+</script>
+</body>
+</html>
