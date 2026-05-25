@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SkillLens — A Systematic Study of Model-Generated Agent Skills</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234f46e5'/%3E%3Cstop offset='0.55' stop-color='%237c3aed'/%3E%3Cstop offset='1' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ccircle cx='27' cy='27' r='13' fill='none' stroke='white' stroke-width='5'/%3E%3Cline x1='36' y1='36' x2='49' y2='49' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1' y='1' width='10' height='10' fill='%23F25022'/%3E%3Crect x='13' y='1' width='10' height='10' fill='%237FBA00'/%3E%3Crect x='1' y='13' width='10' height='10' fill='%2300A4EF'/%3E%3Crect x='13' y='13' width='10' height='10' fill='%23FFB900'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -145,7 +145,7 @@ a:hover { color: #4f46e5; }
   background: rgba(255,255,255,0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(13,148,136,0.22);
+  border: 1px solid rgba(124,58,237,0.18);
   border-radius: 999px;
   text-align: left;
   text-decoration: none;
@@ -155,8 +155,8 @@ a:hover { color: #4f46e5; }
 }
 .related-work:hover {
   transform: translateY(-2px);
-  border-color: rgba(13,148,136,0.45);
-  box-shadow: 0 12px 28px rgba(13,148,136,0.18);
+  border-color: rgba(124,58,237,0.4);
+  box-shadow: 0 12px 28px rgba(124,58,237,0.15);
   color: inherit;
 }
 .related-work .rw-icon {
@@ -176,7 +176,7 @@ a:hover { color: #4f46e5; }
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.62rem; letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #0d9488; font-weight: 600;
+  color: #7c3aed; font-weight: 600;
 }
 .related-work .rw-title {
   font-size: 1rem; color: #1e293b; font-weight: 500;
@@ -187,7 +187,7 @@ a:hover { color: #4f46e5; }
   font-weight: 700;
   font-size: 1.2rem;
   letter-spacing: -0.01em;
-  background: linear-gradient(135deg, #0b7974, #0d9488);
+  background: linear-gradient(110deg, #0ea5e9 0%, #4f46e5 25%, #7c3aed 50%, #ec4899 78%, #f59e0b 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-right: 4px;
@@ -1043,7 +1043,7 @@ footer {
 .navbar-related {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 5px 12px 5px 10px;
-  border: 1px solid rgba(13,148,136,0.22);
+  border: 1px solid rgba(124,58,237,0.18);
   border-radius: 999px;
   background: rgba(255,255,255,0.7);
   text-decoration: none;
@@ -1051,8 +1051,8 @@ footer {
 }
 .navbar-related:hover {
   transform: translateY(-1px);
-  border-color: rgba(13,148,136,0.45);
-  box-shadow: 0 4px 14px rgba(13,148,136,0.18);
+  border-color: rgba(124,58,237,0.4);
+  box-shadow: 0 4px 14px rgba(124,58,237,0.15);
 }
 .navbar-related .nr-icon {
   width: 14px; height: 14px;
@@ -1067,12 +1067,12 @@ footer {
   font-size: 0.6rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #0d9488; font-weight: 600;
+  color: #7c3aed; font-weight: 600;
 }
 .navbar-related .nr-name {
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 700; font-size: 0.98rem;
-  background: linear-gradient(135deg, #0b7974, #0d9488);
+  background: linear-gradient(110deg, #0ea5e9 0%, #4f46e5 25%, #7c3aed 50%, #ec4899 78%, #f59e0b 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
   letter-spacing: -0.01em;
@@ -1244,11 +1244,11 @@ footer {
       <span style="font-size:0.78rem;">* Equal contribution &ensp; † Work done during an internship at MSRA &ensp; ‡ Corresponding authors</span>
     </p>
     <div class="btn-group">
-      <a class="btn btn-outline" href="./" target="_blank">
+      <a class="btn btn-outline" href="https://arxiv.org/abs/2605.23899" target="_blank" rel="noopener">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 2A1.5 1.5 0 0 0 4 3.5v17A1.5 1.5 0 0 0 5.5 22h13a1.5 1.5 0 0 0 1.5-1.5V9.621a1.5 1.5 0 0 0-.44-1.06l-6.12-6.122A1.5 1.5 0 0 0 12.379 2H5.5Zm7 1.5v5a1 1 0 0 0 1 1h5l-6-6Zm-5 9.25a.75.75 0 0 1 .75-.75h8a.75.75 0 0 1 0 1.5h-8a.75.75 0 0 1-.75-.75Zm0 3.5a.75.75 0 0 1 .75-.75h8a.75.75 0 0 1 0 1.5h-8a.75.75 0 0 1-.75-.75Z"/></svg>
         Paper
       </a>
-      <a class="btn btn-outline" href="https://aka.ms/SkillLens" target="_blank" rel="noopener">
+      <a class="btn btn-outline" href="https://github.com/microsoft/SkillLens" target="_blank" rel="noopener">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
         Code
       </a>
@@ -1639,11 +1639,14 @@ footer {
     </div>
     <div class="bibtex-box">
       <button class="copy-btn" onclick="copyBibtex(this)">Copy</button>
-      <pre><code>@misc{huang2026skilllens,
-  title  = {From Raw Experience to Skill Consumption: A Systematic Study of Model-Generated Agent Skills},
-  author = {Huang, Zisu and Xu, Jingwen and Yang, Yifan and Gong, Ziyang and Yang, Qihao and Tian, Muzhao and Wang, Xiaohua and Lv, Changze and Gao, Xuemei and Dai, Qi and Liu, Bei and Qiu, Kai and Yang, Xue and Chen, Dongdong and Zheng, Xiaoqing and Luo, Chong},
-  year   = {2026},
-  note   = {arXiv preprint, to appear}
+      <pre><code>@article{huang2026skilllens,
+  title         = {From Raw Experience to Skill Consumption: A Systematic Study of Model-Generated Agent Skills},
+  author        = {Zisu Huang and Jingwen Xu and Yifan Yang and Ziyang Gong and Qihao Yang and Muzhao Tian and Xiaohua Wang and Changze Lv and Xuemei Gao and Qi Dai and Bei Liu and Kai Qiu and Xue Yang and Dongdong Chen and Xiaoqing Zheng and Chong Luo},
+  year          = {2026},
+  journal       = {arXiv preprint arXiv:2605.23899},
+  eprint        = {2605.23899},
+  archivePrefix = {arXiv},
+  url           = {https://arxiv.org/abs/2605.23899}
 }</code></pre>
     </div>
   </div>
