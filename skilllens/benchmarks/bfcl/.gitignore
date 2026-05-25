@@ -1,0 +1,5 @@
+*.lock
+.file_locks/
+score/
+test_output/
+result/

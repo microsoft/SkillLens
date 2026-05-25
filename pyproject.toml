@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skilllens"
+version = "0.1.0"
+description = "SkillLens: A framework for extracting reusable skills from agent trajectories"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "SkillLens Team"},
+]
+keywords = ["llm", "agent", "skill-extraction", "benchmark"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "openai>=1.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "tenacity>=8.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+alfworld = ["textworld", "alfworld", "numpy"]
+swebench = ["litellm", "typer", "rich", "jinja2", "datasets", "platformdirs"]
+spreadsheet = ["pandas", "openpyxl", "tqdm"]
+bfcl = ["tree_sitter", "json5", "tiktoken", "overrides", "tqdm", "typer", "rich", "numpy", "pandas", "filelock", "tabulate", "mpmath", "sympy"]
+seal0 = ["aiohttp", "beautifulsoup4", "fastapi", "uvicorn", "httpx"]
+dev = ["pytest", "ruff"]
+all = ["skilllens[alfworld,swebench,spreadsheet,bfcl,seal0]"]
+
+[project.scripts]
+skilllens = "skilllens.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["skilllens*"]

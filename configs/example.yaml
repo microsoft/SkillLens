@@ -1,0 +1,31 @@
+# SkillLens Example Configuration
+# Copy this file and customize for your extraction runs.
+
+llm:
+  provider: "openai"          # openai | azure | vllm | gemini
+  model: "gpt-4o"
+  api_key: ""                 # Or set OPENAI_API_KEY env var
+  base_url: ""                # Override for vLLM / custom endpoints
+  temperature: 0.7
+  max_tokens: 16384
+
+input:
+  path: "data/experience_pool/alfworld/gpt54_baseline_20.json"
+  benchmark: "alfworld"
+
+output:
+  path: "output/"
+
+extraction:
+  method: "parallel"        # sequential | parallel
+  batch_size: 5
+  merge_group_size: 10
+  max_concurrency: 5
+  max_skills: 10
+  max_skill_chars: 3000
+  max_total_chars: 0          # 0 = unlimited
+  include_feedback: true
+  max_tool_rounds: 30
+  shuffle_trajectories: false
+  max_modes_per_trajectory: 3
+  meta_skill_guidance: ""

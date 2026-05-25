@@ -1,0 +1,29 @@
+# ALFWorld — parallel (mode-based) extraction example
+# Used by the bench README 3c. Override input.path / output.path on the CLI
+# to point at your specific baseline → convert output.
+llm:
+  provider: "azure"
+  model: "gpt-5.4"
+  api_version: "2025-04-01-preview"
+  # azure_endpoint: read from $AZURE_OPENAI_ENDPOINT (env)
+  # auth:           Managed Identity ($AZURE_CLIENT_ID) or $AZURE_OPENAI_API_KEY
+  temperature: 1
+  max_tokens: 16384
+  reasoning_effort: "medium"
+
+input:
+  path: "data/experience_pool/alfworld/gpt-5.4_baseline_134.json"
+  benchmark: "alfworld"
+
+output:
+  path: "extraction_output/alfworld_parallel/"
+
+extraction:
+  method: "parallel"
+  batch_size: 0          # 0 = all trajectories in one batch (full map-then-reduce)
+  merge_group_size: 10
+  max_concurrency: 32
+  max_skills: 1
+  max_skill_chars: 3000
+  include_feedback: true
+  max_modes_per_trajectory: 3
