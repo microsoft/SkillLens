@@ -130,6 +130,7 @@ EOF
         --network host \
         -v "$CONFIG_PATH:/app/config.json:ro" \
         -v /var/run/docker.sock:/var/run/docker.sock \
+        -e SB_API_TOKEN \
         sb-api \
         python3 /app/api.py --port "$SB_PORT" >/dev/null
 

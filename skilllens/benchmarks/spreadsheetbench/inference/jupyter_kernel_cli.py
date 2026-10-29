@@ -1,3 +1,4 @@
+import os
 import json
 import time
 import logging
@@ -16,6 +17,10 @@ class ClientJupyterKernel:
 
     def execute(self, code):
         payload = {"convid": self.conv_id, "code": code}
+        headers = {"Content-Type": "application/json"}
+        token = os.environ.get("SB_API_TOKEN")
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
 
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -23,7 +28,7 @@ class ClientJupyterKernel:
                     self.url,
                     data=json.dumps(payload),
                     timeout=self.timeout,
-                    headers={"Content-Type": "application/json"},
+                    headers=headers,
                 )
 
                 if response.status_code != 200:
