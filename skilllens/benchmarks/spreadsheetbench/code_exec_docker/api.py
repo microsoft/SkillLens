@@ -1,4 +1,5 @@
 import os
+import hmac
 import time
 import json
 import signal
@@ -72,6 +73,20 @@ class ExecuteHandler(tornado.web.RequestHandler):
                 cls._creation_locks[convid] = asyncio.Lock()
             return cls._creation_locks[convid]
 
+    def prepare(self):
+        # Reject cross-origin "simple" requests (text/plain, form posts) that a
+        # browser can send without a CORS preflight.
+        content_type = self.request.headers.get("Content-Type", "")
+        if content_type.split(";")[0].strip().lower() != "application/json":
+            raise tornado.web.HTTPError(415, "Content-Type must be application/json")
+
+        # Optional shared-secret auth: set SB_API_TOKEN on both server and client.
+        token = os.environ.get("SB_API_TOKEN")
+        if token:
+            supplied = self.request.headers.get("Authorization", "")
+            if not hmac.compare_digest(supplied.encode(), f"Bearer {token}".encode()):
+                raise tornado.web.HTTPError(401)
+
     async def post(self):
         data = json.loads(self.request.body)
         convid = data.get("convid")
@@ -131,6 +146,9 @@ class ExecuteHandler(tornado.web.RequestHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8000)
+    # This endpoint executes arbitrary code; only listen on loopback unless
+    # explicitly asked to (and then set SB_API_TOKEN).
+    parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
 
     app = tornado.web.Application([
@@ -158,5 +176,10 @@ if __name__ == "__main__":
         lambda signum, frame: signal_handler(signum, frame, app)
     )
     server = tornado.httpserver.HTTPServer(app)
-    server.listen(args.port)
+    if args.host not in ("127.0.0.1", "localhost", "::1") and not os.environ.get("SB_API_TOKEN"):
+        logging.warning(
+            f"Listening on {args.host} without SB_API_TOKEN: anyone who can reach "
+            f"port {args.port} can execute arbitrary code."
+        )
+    server.listen(args.port, address=args.host)
     tornado.ioloop.IOLoop.current().start()
