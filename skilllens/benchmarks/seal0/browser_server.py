@@ -10,6 +10,8 @@ import logging
 import requests
 import tiktoken
 import asyncio
+import ipaddress
+import socket
 import urllib.parse
 from datetime import datetime
 from typing import List, Union, Iterable
@@ -281,6 +283,41 @@ def _has_mojibake(text: str, sample_size: int = 500) -> bool:
 # Page fetching
 # ==============================================================================
 
+def _validate_public_url(url: str) -> None:
+    """Raise ValueError unless url is http(s) and every resolved address is public.
+
+    Prevents the /browse endpoint from being used to reach loopback, private
+    (RFC1918), link-local (e.g. 169.254.169.254 cloud metadata) or other
+    non-global addresses on the server's network.
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"unsupported URL scheme: {parsed.scheme!r}")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("URL has no host")
+    try:
+        infos = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80))
+    except socket.gaierror as e:
+        raise ValueError(f"cannot resolve host {host!r}: {e}")
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%", 1)[0])
+        if not ip.is_global:
+            raise ValueError(f"host {host!r} resolves to non-public address {ip}")
+
+
+def _direct_get(url: str, proxies, max_redirects: int = 5) -> requests.Response:
+    """requests.get that re-validates every redirect hop against _validate_public_url."""
+    for _ in range(max_redirects + 1):
+        _validate_public_url(url)
+        resp = requests.get(url, timeout=60, proxies=proxies, allow_redirects=False)
+        if resp.is_redirect and resp.headers.get("location"):
+            url = urllib.parse.urljoin(url, resp.headers["location"])
+            continue
+        return resp
+    raise ValueError("too many redirects")
+
+
 def fetch_page_sync(url: str, req_id: str = "", start_time: float = None) -> str:
     """Fetch webpage via direct request first, fallback to Scrapedo API"""
     prefix = f"[{req_id}]" if req_id else ""
@@ -321,7 +358,7 @@ def fetch_page_sync(url: str, req_id: str = "", start_time: float = None) -> str
     try:
         elapsed = time.time() - start_time
         logger.info(f"{prefix} 🌐 Direct | {elapsed:.1f}s")
-        direct_resp = requests.get(url, timeout=60, proxies=proxies if proxies else None)
+        direct_resp = _direct_get(url, proxies if proxies else None)
         if direct_resp.encoding and direct_resp.encoding.lower() in ('iso-8859-1', 'latin-1', 'ascii'):
             direct_resp.encoding = direct_resp.apparent_encoding or 'utf-8'
         if direct_resp.status_code == 200 and len(direct_resp.text) > 300:
@@ -548,7 +585,17 @@ async def process_url(url: str, goal: str, req_id: str = "", start_time: float =
         elapsed = time.time() - start_time
         logger.info(f"{prefix} 📨 Browse | provider={BROWSE_PROVIDER} | {elapsed:.1f}s | {url[:80]}")
 
-        if BROWSE_PROVIDER == "microsoft":
+        try:
+            _validate_public_url(url)
+        except ValueError as e:
+            logger.warning(f"{prefix} 🚫 Browse | rejected url {url[:120]}: {e}")
+            content = f"[fetch_error] URL rejected: {e}"
+        else:
+            content = None
+
+        if content is not None:
+            pass
+        elif BROWSE_PROVIDER == "microsoft":
             content = await microsoft_browse(url, req_id, start_time)
         else:
             content = await fetch_page(url, req_id, start_time)
@@ -645,4 +692,5 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("BROWSER_SERVER_PORT", 8002))
     logger.info(f"Starting browser server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    host = os.environ.get("BROWSER_SERVER_HOST", "127.0.0.1")
+    uvicorn.run(app, host=host, port=port)
